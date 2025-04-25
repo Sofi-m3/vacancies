@@ -1,0 +1,90 @@
+from bs4 import BeautifulSoup
+import requests
+
+headers = {'User-agent' : 'Mozilla/5.0'}
+#Ссылка на сайт
+url= 'https://ekaterinburg.hh.ru/search/vacancy?text=%D0%90%D0%BD%D0%B0%D0%BB%D0%B8%D1%82%D0%B8%D0%BA+%D0%B4%D0%B0%D0%BD%D0%BD%D1%8B%D1%85&from=suggest_post&salary=&ored_clusters=true&area=1261&hhtmFrom=vacancy_search_list&hhtmFromLabel=vacancy_search_line'
+response = requests.get(url, headers=headers)
+page_code = response.text
+
+soup = BeautifulSoup(page_code, 'html.parser')
+divs = soup.find_all('div', {'class': 'magritte-redesign'})
+
+vacancies = []
+for div in divs:
+  title = div.find('a', {'data-qa': 'serp-item__title'})
+  title_text = title.text
+  link = title['href']
+  salary_tag = div.find('span', {'class': 'magritte-text___pbpft_3-0-29 magritte-text_style-primary___AQ7MW_3-0-29 magritte-text_typography-label-1-regular___pi3R-_3-0-29'})
+  salary = salary_tag.text if salary_tag else "Не указано"
+
+  vacancies.append({'title': title_text,
+                    'link' : 'https://ekaterinburg.hh.ru'+link,
+                    'salary' : salary.replace('\u202f', ' ').replace('\xa0', ' ')})
+
+
+print(vacancies)
+
+
+
+#Подключаем дб
+
+import sqlite3
+
+# Устанавливаем соединение с базой данных
+
+connection = sqlite3.connect('hh.db')
+cursor = connection.cursor()
+
+# Создаем таблицу
+table_name = 'Analiticc'
+cursor.execute(f"""CREATE TABLE IF NOT EXISTS {table_name} (
+	"id"	INTEGER,
+	"profession"	TEXT,
+	"link"	TEXT,
+	"salary"	TEXT,
+	PRIMARY KEY("id")
+);""")
+
+# Сохраняем изменения и закрываем соединение
+connection.commit()
+connection.close()
+
+def add_vacancies(table_name, profession, link, salary):
+    conn = sqlite3.connect('hh.db')
+    cursor = conn.cursor()
+    cursor.execute(f'''
+        INSERT INTO {table_name}(profession, link, salary)
+        VALUES (?, ?, ?)
+        ''', (profession, link, salary))
+    conn.commit()
+    conn.close()
+
+for i in range(0, len(vacancies)):
+  add_vacancies(table_name, vacancies[i]['title'], vacancies[i]['link'], vacancies[i]['salary'])
+
+
+def get_vacancies(table_name):
+  conn = sqlite3.connect('hh.db')
+  cursor = conn.cursor()
+  cursor.execute(f'''
+      SELECT * FROM {table_name}
+    ''')
+  vacancies = cursor.fetchall()
+  conn.close()
+  return vacancies
+
+
+  cursor.execute(f'''
+
+
+def del_table_of_vacancies(table_name):
+  conn = sqlite3.connect('hh.db')
+  cursor = conn.cursor()
+  cursor.execute(f'''
+      DROP TABLE {table_name}
+    ''')
+  conn.close()
+
+del_table_of_vacancies(table_name)
+get_vacancies(table_name)
