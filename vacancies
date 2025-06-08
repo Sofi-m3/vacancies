@@ -27,7 +27,7 @@ print(vacancies)
 
 
 
-#Подключаем дб
+#Подключаем бд
 
 import sqlite3
 
